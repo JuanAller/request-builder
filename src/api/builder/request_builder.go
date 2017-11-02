@@ -7,29 +7,33 @@ import (
 	"encoding/base64"
 	"net/http/httputil"
 	"log"
+	"encoding/xml"
 )
 
 type requestBuilder struct {
-	Client  HttpClient
-	Request *Request
+	client             HttpClient
+	request            *Request
+	responseType       string
+	unmarshalFunctions map[string]func([]byte, interface{}) error
 }
 
 func (requestBuilder *requestBuilder) WithQueryParam(key string, value string) *requestBuilder {
-	requestBuilder.Request.QueryParams[key] = value
+	requestBuilder.request.QueryParams[key] = value
 	return requestBuilder
 }
 
 func (requestBuilder *requestBuilder) WithHeader(key string, value string) *requestBuilder {
-	requestBuilder.Request.Headers[key] = value
+	requestBuilder.request.Headers[key] = value
 	return requestBuilder
 }
 
 func (requestBuilder *requestBuilder) WithContentType(contentType string) *requestBuilder {
+	requestBuilder.responseType = contentType
 	return requestBuilder.WithHeader("Content-Type", contentType)
 }
 
 func (requestBuilder *requestBuilder) WithBody(body interface{}) *requestBuilder {
-	requestBuilder.Request.Body = body
+	requestBuilder.request.Body = body
 	return requestBuilder
 }
 
@@ -43,34 +47,49 @@ func (requestBuilder *requestBuilder) WithBasicAuthorization(username string, pa
 
 func Get(client HttpClient, path string) *requestBuilder {
 	return &requestBuilder{
-		Client:  client,
-		Request: NewRequest(http.MethodGet, path),
+		client:             client,
+		request:            NewRequest(http.MethodGet, path),
+		responseType:       "application/json",
+		unmarshalFunctions: unmarshalFunctionsMap(),
 	}
 }
 
 func Post(client HttpClient, path string) *requestBuilder {
 	return &requestBuilder{
-		Client:  client,
-		Request: NewRequest(http.MethodPost, path),
+		client:             client,
+		request:            NewRequest(http.MethodPost, path),
+		responseType:       "application/json",
+		unmarshalFunctions: unmarshalFunctionsMap(),
 	}
 }
 
 func Put(client HttpClient, path string) *requestBuilder {
 	return &requestBuilder{
-		Client:  client,
-		Request: NewRequest(http.MethodPut, path),
+		client:             client,
+		request:            NewRequest(http.MethodPut, path),
+		responseType:       "application/json",
+		unmarshalFunctions: unmarshalFunctionsMap(),
 	}
 }
 
 func Delete(client HttpClient, path string) *requestBuilder {
 	return &requestBuilder{
-		Client:  client,
-		Request: NewRequest(http.MethodDelete, path),
+		client:             client,
+		request:            NewRequest(http.MethodDelete, path),
+		responseType:       "application/json",
+		unmarshalFunctions: unmarshalFunctionsMap(),
+	}
+}
+
+func unmarshalFunctionsMap() map[string]func([]byte, interface{}) error {
+	return map[string]func([]byte, interface{}) error{
+		"application/json": json.Unmarshal,
+		"application/xml":  xml.Unmarshal,
 	}
 }
 
 func (requestBuilder *requestBuilder) Execute(entityResponse interface{}) *Response {
-	response, err := requestBuilder.Request.Execute(requestBuilder.Client)
+	response, err := requestBuilder.request.Execute(requestBuilder.client)
 	if err != nil {
 		return &Response{
 			Error: err,
@@ -83,7 +102,7 @@ func (requestBuilder *requestBuilder) Execute(entityResponse interface{}) *Respo
 		body, _ := ioutil.ReadAll(response.Body)
 		return &Response{
 			StatusCode: response.StatusCode,
-			Error:      json.Unmarshal(body, entityResponse),
+			Error:      requestBuilder.unmarshalFunctions[requestBuilder.responseType](body, entityResponse),
 		}
 	}
 	return &Response{
