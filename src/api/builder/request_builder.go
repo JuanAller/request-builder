@@ -15,6 +15,7 @@ type requestBuilder struct {
 	request            *Request
 	responseType       string
 	unmarshalFunctions map[string]func([]byte, interface{}) error
+	logResponseBody    bool
 }
 
 func (requestBuilder *requestBuilder) WithQueryParam(key string, value string) *requestBuilder {
@@ -43,6 +44,16 @@ func (requestBuilder *requestBuilder) Accept(accept string) *requestBuilder {
 
 func (requestBuilder *requestBuilder) WithBasicAuthorization(username string, password string) *requestBuilder {
 	return requestBuilder.WithHeader("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(username+":"+password)))
+}
+
+func (requestBuilder *requestBuilder) LogResponseBody() *requestBuilder {
+	requestBuilder.logResponseBody = true
+	return requestBuilder
+}
+
+func (requestBuilder *requestBuilder) LogRequestBody() *requestBuilder {
+	requestBuilder.request.logRequestBody = true
+	return requestBuilder
 }
 
 func Get(client HttpClient, path string) *requestBuilder {
@@ -95,7 +106,7 @@ func (requestBuilder *requestBuilder) Execute(entityResponse interface{}) *Respo
 			Error: err,
 		}
 	}
-	rawResp, _ := httputil.DumpResponse(response, true)
+	rawResp, _ := httputil.DumpResponse(response, requestBuilder.logResponseBody)
 	log.Println(string(rawResp))
 	defer response.Body.Close()
 	if response.StatusCode >= 200 && response.StatusCode < 300 {

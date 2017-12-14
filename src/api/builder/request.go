@@ -9,11 +9,12 @@ import (
 )
 
 type Request struct {
-	Method      string
-	Path        string
-	Headers     map[string]string
-	QueryParams map[string]string
-	Body        interface{}
+	Method         string
+	Path           string
+	Headers        map[string]string
+	QueryParams    map[string]string
+	Body           interface{}
+	logRequestBody bool
 }
 
 func NewRequest(method string, path string) *Request {
@@ -39,7 +40,7 @@ func (simpleRequest *Request) Execute(client HttpClient) (*http.Response, error)
 	for key, value := range simpleRequest.Headers {
 		request.Header.Set(key, value)
 	}
-	rawRequest, _ := httputil.DumpRequestOut(request, true)
+	rawRequest, _ := httputil.DumpRequestOut(request, simpleRequest.logRequestBody)
 	log.Println(string(rawRequest))
 	return client.Do(request)
 }
