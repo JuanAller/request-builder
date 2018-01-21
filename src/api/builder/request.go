@@ -8,7 +8,7 @@ import (
 	"log"
 )
 
-type Request struct {
+type request struct {
 	Method         string
 	Path           string
 	Headers        map[string]string
@@ -17,8 +17,8 @@ type Request struct {
 	logRequestBody bool
 }
 
-func NewRequest(method string, path string) *Request {
-	return &Request{
+func newRequest(method string, path string) *request {
+	return &request{
 		Method:      method,
 		Path:        path,
 		Headers:     make(map[string]string),
@@ -26,21 +26,21 @@ func NewRequest(method string, path string) *Request {
 	}
 }
 
-func (simpleRequest *Request) Execute(client HttpClient) (*http.Response, error) {
-	byteSlice, marshallErr := json.Marshal(simpleRequest.Body)
+func (request *request) execute(client HttpClient) (*http.Response, error) {
+	byteSlice, marshallErr := json.Marshal(request.Body)
 	if marshallErr != nil {
 		return nil, marshallErr
 	}
-	request, _ := http.NewRequest(simpleRequest.Method, simpleRequest.Path, bytes.NewBuffer(byteSlice))
-	query := request.URL.Query()
-	for key, value := range simpleRequest.QueryParams {
+	newRequest, _ := http.NewRequest(request.Method, request.Path, bytes.NewBuffer(byteSlice))
+	query := newRequest.URL.Query()
+	for key, value := range request.QueryParams {
 		query.Add(key, value)
 	}
-	request.URL.RawQuery = query.Encode()
-	for key, value := range simpleRequest.Headers {
-		request.Header.Set(key, value)
+	newRequest.URL.RawQuery = query.Encode()
+	for key, value := range request.Headers {
+		newRequest.Header.Set(key, value)
 	}
-	rawRequest, _ := httputil.DumpRequestOut(request, simpleRequest.logRequestBody)
+	rawRequest, _ := httputil.DumpRequestOut(newRequest, request.logRequestBody)
 	log.Println(string(rawRequest))
-	return client.Do(request)
+	return client.Do(newRequest)
 }
