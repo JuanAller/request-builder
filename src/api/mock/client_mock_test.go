@@ -15,6 +15,7 @@ func TestHttpClientMock_DoWithJsonBody(t *testing.T) {
 
 	responseMap := make(map[string]string)
 	response := builder.Get(mockClient, "http://mock.test/id").
+		WithJSONContentType().
 		LogRequestBody().
 		LogResponseBody().
 		Execute(&responseMap)
@@ -39,7 +40,7 @@ func TestHttpClientMock_DoWithXMLBody(t *testing.T) {
 
 	responseStruct := &builder.Response{}
 	response := builder.Get(mockClient, "http://mock.test/id").
-		WithContentType("application/xml").
+		WithXMLContentType().
 		LogRequestBody().
 		LogResponseBody().
 		Execute(responseStruct)

@@ -40,7 +40,9 @@ func (request *request) execute(client HttpClient) (*http.Response, error) {
 	for key, value := range request.Headers {
 		newRequest.Header.Set(key, value)
 	}
-	rawRequest, _ := httputil.DumpRequestOut(newRequest, request.logRequestBody)
-	log.Println(string(rawRequest))
+	if request.logRequestBody {
+		rawRequest, _ := httputil.DumpRequestOut(newRequest, request.logRequestBody)
+		log.Println(string(rawRequest))
+	}
 	return client.Do(newRequest)
 }

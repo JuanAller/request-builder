@@ -105,7 +105,7 @@ func TestGetServerError(t *testing.T) {
 func TestGetWithContentType(t *testing.T) {
 	responseMap := make(map[string]interface{})
 	response := Get(&http.Client{}, server.URL+"/get_with_content_type").
-		WithContentType("application/json").
+		WithJSONContentType().
 		Execute(&responseMap)
 	if response.StatusCode != http.StatusOK {
 		t.Errorf("expected 200 status code")
@@ -115,7 +115,7 @@ func TestGetWithContentType(t *testing.T) {
 func TestGetXML(t *testing.T)  {
 	responseMap := &Response{}
 	response := Get(&http.Client{}, server.URL+"/get_with_xml").
-		WithContentType("application/xml").
+		WithXMLContentType().
 		Execute(responseMap)
 	if response.StatusCode != http.StatusOK {
 		t.Errorf("expected 200 status code")

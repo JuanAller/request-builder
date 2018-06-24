@@ -30,9 +30,14 @@ func (requestBuilder *requestBuilder) WithHeader(key string, value string) *requ
 	return requestBuilder
 }
 
-func (requestBuilder *requestBuilder) WithContentType(contentType string) *requestBuilder {
-	requestBuilder.contentType = contentType
-	return requestBuilder.WithHeader("Content-Type", contentType)
+func (requestBuilder *requestBuilder) WithJSONContentType() *requestBuilder {
+	requestBuilder.contentType = APPLICATIONJSON
+	return requestBuilder.WithHeader("Content-Type", APPLICATIONJSON)
+}
+
+func (requestBuilder *requestBuilder) WithXMLContentType() *requestBuilder {
+	requestBuilder.contentType = APPLICATIONXML
+	return requestBuilder.WithHeader("Content-Type", APPLICATIONXML)
 }
 
 func (requestBuilder *requestBuilder) WithBody(body interface{}) *requestBuilder {
@@ -65,8 +70,10 @@ func (requestBuilder *requestBuilder) Execute(entityResponse interface{}) *Respo
 			Error: err,
 		}
 	}
-	rawResp, _ := httputil.DumpResponse(response, requestBuilder.logResponseBody)
-	log.Println(string(rawResp))
+	if requestBuilder.logResponseBody {
+		rawResp, _ := httputil.DumpResponse(response, requestBuilder.logResponseBody)
+		log.Println(string(rawResp))
+	}
 	defer response.Body.Close()
 	if response.StatusCode >= 200 && response.StatusCode < 300 {
 		body, _ := ioutil.ReadAll(response.Body)
