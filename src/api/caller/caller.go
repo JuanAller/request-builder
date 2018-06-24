@@ -13,9 +13,6 @@ type Caller interface {
 	ExecuteCall() error
 }
 
-/**
- Execute N calls, if any fail, return error, and abort
- */
 func InParallelCalls(callers ...Caller) error {
 	var g errgroup.Group
 	for _, caller := range callers {

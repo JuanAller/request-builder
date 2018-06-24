@@ -39,7 +39,7 @@ func setup() {
 		writer.WriteHeader(http.StatusOK)
 		body, _ := xml.Marshal(&Response{
 			StatusCode: 200,
-			Error: nil,
+			Error:      nil,
 		})
 		writer.Write(body)
 	})
@@ -112,7 +112,7 @@ func TestGetWithContentType(t *testing.T) {
 	}
 }
 
-func TestGetXML(t *testing.T)  {
+func TestGetXML(t *testing.T) {
 	responseMap := &Response{}
 	response := Get(&http.Client{}, server.URL+"/get_with_xml").
 		WithXMLContentType().

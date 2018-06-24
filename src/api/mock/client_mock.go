@@ -14,4 +14,3 @@ func (mock *HttpClientMock) Do(request *http.Request) (*http.Response, error) {
 	}
 	return &http.Response{}, nil
 }
-

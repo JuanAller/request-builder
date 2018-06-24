@@ -7,11 +7,6 @@ import (
 
 var ErrNotRetry = errors.New("Not retry")
 
-/**
- Entity : struct where marshal response body
- ResponseHandler : handle status code, or errors
- Retries : number of retries, if request fail
- */
 type RestCaller struct {
 	RequestBuilder  Executable
 	Entity          interface{}

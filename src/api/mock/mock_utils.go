@@ -36,4 +36,3 @@ func newBytesResponse(status int, body []byte) *http.Response {
 		Header:     http.Header{},
 	}
 }
-
