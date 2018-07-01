@@ -4,10 +4,9 @@ import (
 	"testing"
 	"net/http"
 	"net/http/httptest"
-	"encoding/json"
 	"os"
 	"time"
-	"encoding/xml"
+	"github.com/JuanAller/request-builder/src/api/mock"
 )
 
 var tmux = http.NewServeMux()
@@ -20,50 +19,9 @@ func TestMain(m *testing.M) {
 }
 
 func setup() {
-	tmux.HandleFunc("/get_ok", func(writer http.ResponseWriter, request *http.Request) {
-		body, _ := json.Marshal(map[string]string{"name": "aName"})
-		writer.Write(body)
-		return
-	})
-	tmux.HandleFunc("/get_not_found", func(writer http.ResponseWriter, request *http.Request) {
-		writer.WriteHeader(http.StatusNotFound)
-	})
-	tmux.HandleFunc("/get_server_error", func(writer http.ResponseWriter, request *http.Request) {
-		writer.WriteHeader(http.StatusInternalServerError)
-	})
 	tmux.HandleFunc("/get_timeout", func(writer http.ResponseWriter, request *http.Request) {
 		time.Sleep(time.Millisecond * 20)
 		writer.WriteHeader(http.StatusOK)
-	})
-	tmux.HandleFunc("/get_with_xml", func(writer http.ResponseWriter, request *http.Request) {
-		writer.WriteHeader(http.StatusOK)
-		body, _ := xml.Marshal(&Response{
-			StatusCode: 200,
-			Error:      nil,
-		})
-		writer.Write(body)
-	})
-	tmux.HandleFunc("/get_with_query_param", func(writer http.ResponseWriter, request *http.Request) {
-		if request.URL.Query().Get("query_param") == "my_param" {
-			writer.WriteHeader(http.StatusOK)
-		} else {
-			writer.WriteHeader(http.StatusInternalServerError)
-		}
-	})
-	tmux.HandleFunc("/get_with_content_type", func(writer http.ResponseWriter, request *http.Request) {
-		if request.Header.Get("Content-Type") == "application/json" {
-			writer.WriteHeader(http.StatusOK)
-		} else {
-			writer.WriteHeader(http.StatusInternalServerError)
-		}
-	})
-	tmux.HandleFunc("/post_ok", func(writer http.ResponseWriter, request *http.Request) {
-		writer.WriteHeader(http.StatusCreated)
-		body, _ := json.Marshal(map[string]string{"my_field": "my_value"})
-		writer.Write(body)
-	})
-	tmux.HandleFunc("/post_server_error", func(writer http.ResponseWriter, request *http.Request) {
-		writer.WriteHeader(http.StatusInternalServerError)
 	})
 }
 
@@ -77,7 +35,11 @@ func TestGetTimeout(t *testing.T) {
 
 func TestGet(t *testing.T) {
 	responseMap := make(map[string]string)
-	response := Get(&http.Client{}, server.URL+"/get_ok").Execute(&responseMap)
+	response := Get(&mock.HttpClientMock{
+		MakeResponseFunction: func(request *http.Request) (*http.Response, error) {
+			return mock.NewJsonResponse(http.StatusOK, map[string]string{"name": "aName"})
+		},
+	}, "http://test/get_ok").Execute(&responseMap)
 	if response.Error != nil {
 		t.Errorf("not expected error")
 	}
@@ -88,7 +50,12 @@ func TestGet(t *testing.T) {
 
 func TestGetNotFound(t *testing.T) {
 	responseMap := make(map[string]string)
-	response := Get(&http.Client{}, server.URL+"/get_not_found").Execute(&responseMap)
+	response := Get(&mock.HttpClientMock{
+		MakeResponseFunction: func(request *http.Request) (*http.Response, error) {
+			return mock.NewJsonResponse(http.StatusNotFound, map[string]string{"status": "not_found"})
+		},
+	}, "http://test/get_not_found").Execute(&responseMap)
+
 	if response.StatusCode != http.StatusNotFound {
 		t.Errorf("expected not found")
 	}
@@ -96,7 +63,12 @@ func TestGetNotFound(t *testing.T) {
 
 func TestGetServerError(t *testing.T) {
 	responseMap := make(map[string]string)
-	response := Get(&http.Client{}, server.URL+"/get_server_error").Execute(&responseMap)
+	response := Get(&mock.HttpClientMock{
+		MakeResponseFunction: func(request *http.Request) (*http.Response, error) {
+			return mock.NewJsonResponse(http.StatusInternalServerError, map[string]string{"status": "internal_server_error"})
+		},
+	}, "http://test/get_server_error").Execute(&responseMap)
+
 	if response.StatusCode != http.StatusInternalServerError {
 		t.Errorf("expected server error")
 	}
@@ -104,7 +76,14 @@ func TestGetServerError(t *testing.T) {
 
 func TestGetWithContentType(t *testing.T) {
 	responseMap := make(map[string]interface{})
-	response := Get(&http.Client{}, server.URL+"/get_with_content_type").
+	response := Get(&mock.HttpClientMock{
+		MakeResponseFunction: func(request *http.Request) (*http.Response, error) {
+			if request.Header.Get("Content-Type") != APPLICATIONJSON {
+				return mock.NewJsonResponse(http.StatusInternalServerError, map[string]string{"status": "fail"})
+			}
+			return mock.NewJsonResponse(http.StatusOK, map[string]string{"status": "status_ok"})
+		},
+	}, "http://test/get_with_content_type").
 		WithJSONContentType().
 		Execute(&responseMap)
 	if response.StatusCode != http.StatusOK {
@@ -114,7 +93,20 @@ func TestGetWithContentType(t *testing.T) {
 
 func TestGetXML(t *testing.T) {
 	responseMap := &Response{}
-	response := Get(&http.Client{}, server.URL+"/get_with_xml").
+	response := Get(&mock.HttpClientMock{
+		MakeResponseFunction: func(request *http.Request) (*http.Response, error) {
+			if request.Header.Get("Content-Type") != APPLICATIONXML {
+				return mock.NewXmlResponse(http.StatusInternalServerError, &Response{
+					StatusCode: http.StatusInternalServerError,
+					Error:      nil,
+				})
+			}
+			return mock.NewXmlResponse(http.StatusOK, &Response{
+				StatusCode: http.StatusOK,
+				Error:      nil,
+			})
+		},
+	}, "http://test/get_with_xml").
 		WithXMLContentType().
 		Execute(responseMap)
 	if response.StatusCode != http.StatusOK {
@@ -127,9 +119,17 @@ func TestGetXML(t *testing.T) {
 
 func TestRequestBuilder_WithQueryParam(t *testing.T) {
 	responseMap := make(map[string]interface{})
-	response := Get(&http.Client{}, server.URL+"/get_with_query_param").
+	response := Get(&mock.HttpClientMock{
+		MakeResponseFunction: func(request *http.Request) (*http.Response, error) {
+			if request.URL.Query().Get("query_param") != "my_param" {
+				mock.NewJsonResponse(http.StatusInternalServerError, map[string]string{"status": "error"})
+			}
+			return mock.NewJsonResponse(http.StatusOK, map[string]string{"status": "status_ok"})
+		},
+	}, "http://test/get_with_query_param").
 		WithQueryParam("query_param", "my_param").
 		Execute(&responseMap)
+
 	if response.StatusCode != http.StatusOK {
 		t.Errorf("expecte 200 status code")
 	}
@@ -137,10 +137,14 @@ func TestRequestBuilder_WithQueryParam(t *testing.T) {
 
 func TestPostOk(t *testing.T) {
 	responseMap := make(map[string]string)
-	body := map[string]string{"my_field": "my_value"}
-	response := Post(&http.Client{}, server.URL+"/post_ok").
-		WithBody(body).
+	response := Post(&mock.HttpClientMock{
+		MakeResponseFunction: func(request *http.Request) (*http.Response, error) {
+			return mock.NewJsonResponse(http.StatusCreated, map[string]string{"my_field": "my_value"})
+		},
+	}, "http://test/post_ok").
+		WithBody(map[string]string{"my_field": "my_value"}).
 		Execute(&responseMap)
+
 	if response.StatusCode != http.StatusCreated {
 		t.Errorf("expected status 201")
 	}
@@ -154,8 +158,30 @@ func TestPostOk(t *testing.T) {
 
 func TestPostWithServerError(t *testing.T) {
 	responseMap := make(map[string]interface{})
-	response := Post(&http.Client{}, server.URL+"/post_server_error").Execute(&responseMap)
+	response := Post(&mock.HttpClientMock{
+		MakeResponseFunction: func(request *http.Request) (*http.Response, error) {
+			return mock.NewJsonResponse(http.StatusInternalServerError, map[string]string{"status": "error"})
+		},
+	}, "http://test/post_server_error").Execute(&responseMap)
 	if response.StatusCode != http.StatusInternalServerError {
 		t.Errorf("expected 500 status code")
+	}
+}
+
+func TestGetWithBasicAuthentication(t *testing.T) {
+	responseMap := make(map[string]interface{})
+	response := Get(&mock.HttpClientMock{
+		MakeResponseFunction: func(request *http.Request) (*http.Response, error) {
+			if request.Header.Get("Authorization") != "Basic YWRtaW46YWRtaW4=" {
+				return mock.NewJsonResponse(http.StatusInternalServerError, map[string]string{"status": "fail"})
+			}
+			return mock.NewJsonResponse(http.StatusOK, map[string]string{"status": "ok"})
+		},
+	}, "http://test/get_basic_auth").
+		WithJSONContentType().
+		WithBasicAuthorization("admin", "admin").
+		Execute(&responseMap)
+	if response.StatusCode != http.StatusOK {
+		t.Errorf("Expected 200")
 	}
 }

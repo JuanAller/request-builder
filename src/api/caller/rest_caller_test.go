@@ -7,16 +7,16 @@ import (
 	"errors"
 )
 
-type ExecutableMock struct {
+type executableMock struct {
 	mockExecute func(entityResponse interface{}) *builder.Response
 	totalCalls  int
 }
 
-func (rbm *ExecutableMock) restartCalls() {
+func (rbm *executableMock) restartCalls() {
 	rbm.totalCalls = 0
 }
 
-func (rbm *ExecutableMock) Execute(entityResponse interface{}) *builder.Response {
+func (rbm *executableMock) Execute(entityResponse interface{}) *builder.Response {
 	rbm.totalCalls++
 	return rbm.mockExecute(entityResponse)
 }
@@ -24,16 +24,16 @@ func (rbm *ExecutableMock) Execute(entityResponse interface{}) *builder.Response
 func TestRestCaller_ExecuteCall(t *testing.T) {
 	cases := []struct {
 		name            string
-		executable      *ExecutableMock
+		executable      *executableMock
 		entity          interface{}
 		retries         int
-		responseHandler func(resp *builder.Response) error
+		responseHandler func(resp *builder.Response) (error, bool)
 		expectedError   string
 		withRetries     bool
 	}{
 		{
 			name: "not error",
-			executable: &ExecutableMock{
+			executable: &executableMock{
 				mockExecute: func(entityResponse interface{}) *builder.Response {
 					return &builder.Response{
 						StatusCode: http.StatusOK,
@@ -42,17 +42,17 @@ func TestRestCaller_ExecuteCall(t *testing.T) {
 			},
 			entity:  nil,
 			retries: 0,
-			responseHandler: func(resp *builder.Response) error {
+			responseHandler: func(resp *builder.Response) (error, bool) {
 				if resp.StatusCode != http.StatusOK {
-					return errors.New("an error")
+					return errors.New("an error"), true
 				}
-				return nil
+				return nil, false
 			},
 			expectedError: "",
 		},
 		{
 			name: "error_with_no_retries",
-			executable: &ExecutableMock{
+			executable: &executableMock{
 				mockExecute: func(entityResponse interface{}) *builder.Response {
 					return &builder.Response{
 						StatusCode: http.StatusServiceUnavailable,
@@ -61,17 +61,17 @@ func TestRestCaller_ExecuteCall(t *testing.T) {
 			},
 			entity:  nil,
 			retries: 0,
-			responseHandler: func(resp *builder.Response) error {
+			responseHandler: func(resp *builder.Response) (error, bool) {
 				if resp.StatusCode == http.StatusServiceUnavailable {
-					return errors.New("an error")
+					return errors.New("an error"), false
 				}
-				return nil
+				return nil, false
 			},
 			expectedError: "an error",
 		},
 		{
 			name: "error_with_retries",
-			executable: &ExecutableMock{
+			executable: &executableMock{
 				mockExecute: func(entityResponse interface{}) *builder.Response {
 					return &builder.Response{
 						StatusCode: http.StatusServiceUnavailable,
@@ -80,11 +80,11 @@ func TestRestCaller_ExecuteCall(t *testing.T) {
 			},
 			entity:  nil,
 			retries: 2,
-			responseHandler: func(resp *builder.Response) error {
+			responseHandler: func(resp *builder.Response) (error, bool) {
 				if resp.StatusCode == http.StatusServiceUnavailable {
-					return errors.New("an error")
+					return errors.New("an error"), true
 				}
-				return nil
+				return nil, false
 			},
 			expectedError: "an error",
 			withRetries:   true,

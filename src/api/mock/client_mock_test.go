@@ -8,7 +8,7 @@ import (
 
 func TestHttpClientMock_DoWithJsonBody(t *testing.T) {
 	mockClient := &HttpClientMock{
-		makeResponseFunction: func(request *http.Request) (*http.Response, error) {
+		MakeResponseFunction: func(request *http.Request) (*http.Response, error) {
 			return NewJsonResponse(http.StatusOK, map[string]string{"hola": "mundo"})
 		},
 	}
@@ -30,7 +30,7 @@ func TestHttpClientMock_DoWithJsonBody(t *testing.T) {
 
 func TestHttpClientMock_DoWithXMLBody(t *testing.T) {
 	mockClient := &HttpClientMock{
-		makeResponseFunction: func(request *http.Request) (*http.Response, error) {
+		MakeResponseFunction: func(request *http.Request) (*http.Response, error) {
 			return NewXmlResponse(http.StatusOK, &builder.Response{
 				StatusCode: http.StatusOK,
 				Error:      nil,

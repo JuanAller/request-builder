@@ -2,27 +2,25 @@ package caller
 
 import (
 	"github.com/JuanAller/request-builder/src/api/builder"
-	"errors"
 )
-
-var ErrNotRetry = errors.New("Not retry")
 
 type RestCaller struct {
 	RequestBuilder  Executable
 	Entity          interface{}
-	ResponseHandler func(resp *builder.Response) error
+	ResponseHandler func(resp *builder.Response) (err error, retry bool)
 	Retries         int
 }
 
 func (c *RestCaller) ExecuteCall() error {
 	var err error
+	var retry bool
 	for i := 0; i <= c.Retries; i++ {
-		err = c.ResponseHandler(c.RequestBuilder.Execute(c.Entity))
+		err, retry = c.ResponseHandler(c.RequestBuilder.Execute(c.Entity))
 		if err == nil {
 			return nil
 		}
-		if err == ErrNotRetry {
-			return ErrNotRetry
+		if !retry {
+			return err
 		}
 	}
 	return err
