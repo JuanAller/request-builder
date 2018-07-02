@@ -3,35 +3,8 @@ package builder
 import (
 	"testing"
 	"net/http"
-	"net/http/httptest"
-	"os"
-	"time"
 	"github.com/JuanAller/request-builder/src/api/mock"
 )
-
-var tmux = http.NewServeMux()
-var server = httptest.NewServer(tmux)
-
-func TestMain(m *testing.M) {
-	setup()
-	code := m.Run()
-	os.Exit(code)
-}
-
-func setup() {
-	tmux.HandleFunc("/get_timeout", func(writer http.ResponseWriter, request *http.Request) {
-		time.Sleep(time.Millisecond * 20)
-		writer.WriteHeader(http.StatusOK)
-	})
-}
-
-func TestGetTimeout(t *testing.T) {
-	responseMap := make(map[string]string)
-	response := Get(&http.Client{Timeout: time.Millisecond * 10}, server.URL+"/get_timeout").Execute(&responseMap)
-	if response.Error == nil {
-		t.Errorf("expected timeout error")
-	}
-}
 
 func TestGet(t *testing.T) {
 	responseMap := make(map[string]string)
