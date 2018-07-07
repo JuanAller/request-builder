@@ -1,14 +1,16 @@
 package caller
 
 import (
+	"time"
 	"github.com/JuanAller/request-builder/src/api/builder"
 )
 
 type RestCaller struct {
-	RequestBuilder  Executable
+	RequestBuilder  ExecutableRequest
 	Entity          interface{}
 	ResponseHandler func(resp *builder.Response) (err error, retry bool)
 	Retries         int
+	BackOff         func(retryNumber int) time.Duration
 }
 
 func (c *RestCaller) ExecuteCall() error {
@@ -22,6 +24,7 @@ func (c *RestCaller) ExecuteCall() error {
 		if !retry {
 			return err
 		}
+		time.Sleep(c.BackOff(i))
 	}
 	return err
 }

@@ -5,7 +5,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-type Executable interface {
+type ExecutableRequest interface {
 	Execute(entityResponse interface{}) *builder.Response
 }
 

@@ -5,6 +5,7 @@ import (
 	"github.com/JuanAller/request-builder/src/api/builder"
 	"net/http"
 	"errors"
+	"time"
 )
 
 type executableMock struct {
@@ -28,6 +29,7 @@ func TestRestCaller_ExecuteCall(t *testing.T) {
 		entity          interface{}
 		retries         int
 		responseHandler func(resp *builder.Response) (error, bool)
+		backOff         func(retry int) time.Duration
 		expectedError   string
 		withRetries     bool
 	}{
@@ -48,6 +50,9 @@ func TestRestCaller_ExecuteCall(t *testing.T) {
 				}
 				return nil, false
 			},
+			backOff: func(retry int) time.Duration {
+				return time.Millisecond * 0
+			},
 			expectedError: "",
 		},
 		{
@@ -66,6 +71,9 @@ func TestRestCaller_ExecuteCall(t *testing.T) {
 					return errors.New("an error"), false
 				}
 				return nil, false
+			},
+			backOff: func(retry int) time.Duration {
+				return time.Millisecond * 0
 			},
 			expectedError: "an error",
 		},
@@ -86,6 +94,9 @@ func TestRestCaller_ExecuteCall(t *testing.T) {
 				}
 				return nil, false
 			},
+			backOff: func(retry int) time.Duration {
+				return time.Millisecond * 0
+			},
 			expectedError: "an error",
 			withRetries:   true,
 		},
@@ -98,6 +109,7 @@ func TestRestCaller_ExecuteCall(t *testing.T) {
 				Entity:          c.entity,
 				ResponseHandler: c.responseHandler,
 				Retries:         c.retries,
+				BackOff:         c.backOff,
 			}
 
 			err := restCaller.ExecuteCall()
