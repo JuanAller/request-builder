@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"errors"
 	"time"
+	"fmt"
 )
 
 type executableMock struct {
@@ -115,7 +116,8 @@ func TestRestCaller_ExecuteCall(t *testing.T) {
 			err := restCaller.ExecuteCall()
 
 			if c.withRetries {
-				if restCaller.Retries != c.retries {
+				if c.executable.totalCalls-1 != c.retries {
+					fmt.Println(c.executable.totalCalls)
 					c.executable.restartCalls()
 					t.Errorf("Retries fail")
 				}
