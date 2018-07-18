@@ -8,37 +8,41 @@ import (
 
 func Get(client HttpClient, path string) *requestBuilder {
 	return &requestBuilder{
-		client:             client,
-		request:            newRequest(http.MethodGet, path),
-		contentType:        APPLICATIONJSON,
-		unmarshalFunctions: unmarshalFunctionsMap(),
+		client:               client,
+		request:              newRequest(http.MethodGet, path),
+		contentType:          APPLICATIONJSON,
+		unmarshalFunctions:   unmarshalFunctionsMap(),
+		compressionFunctions: compressionFunctionsMap(),
 	}
 }
 
 func Post(client HttpClient, path string) *requestBuilder {
 	return &requestBuilder{
-		client:             client,
-		request:            newRequest(http.MethodPost, path),
-		contentType:        APPLICATIONJSON,
-		unmarshalFunctions: unmarshalFunctionsMap(),
+		client:               client,
+		request:              newRequest(http.MethodPost, path),
+		contentType:          APPLICATIONJSON,
+		unmarshalFunctions:   unmarshalFunctionsMap(),
+		compressionFunctions: compressionFunctionsMap(),
 	}
 }
 
 func Put(client HttpClient, path string) *requestBuilder {
 	return &requestBuilder{
-		client:             client,
-		request:            newRequest(http.MethodPut, path),
-		contentType:        APPLICATIONJSON,
-		unmarshalFunctions: unmarshalFunctionsMap(),
+		client:               client,
+		request:              newRequest(http.MethodPut, path),
+		contentType:          APPLICATIONJSON,
+		unmarshalFunctions:   unmarshalFunctionsMap(),
+		compressionFunctions: compressionFunctionsMap(),
 	}
 }
 
 func Delete(client HttpClient, path string) *requestBuilder {
 	return &requestBuilder{
-		client:             client,
-		request:            newRequest(http.MethodDelete, path),
-		contentType:        APPLICATIONJSON,
-		unmarshalFunctions: unmarshalFunctionsMap(),
+		client:               client,
+		request:              newRequest(http.MethodDelete, path),
+		contentType:          APPLICATIONJSON,
+		unmarshalFunctions:   unmarshalFunctionsMap(),
+		compressionFunctions: compressionFunctionsMap(),
 	}
 }
 

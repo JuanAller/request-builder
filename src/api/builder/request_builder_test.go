@@ -158,3 +158,26 @@ func TestGetWithBasicAuthentication(t *testing.T) {
 		t.Errorf("Expected 200")
 	}
 }
+
+func TestGetWithGZIPCompression(t *testing.T) {
+	responseMap := make(map[string]interface{})
+	response := Get(&mock.HttpClientMock{
+		MakeResponseFunction: func(request *http.Request) (*http.Response, error) {
+			if request.Header.Get("Accept-Encoding") != "gzip" {
+				return mock.NewJsonGzipResponse(http.StatusInternalServerError, map[string]string{"status": "fail"})
+			}
+			return mock.NewJsonGzipResponse(http.StatusOK, map[string]string{"status": "ok"})
+		},
+	}, "http://test/get_with_gzip").
+		AcceptGzipEncoding().
+		WithJSONContentType().
+		LogRequestBody().
+		LogResponseBody().
+		Execute(&responseMap)
+	if response.StatusCode != http.StatusOK {
+		t.Errorf("Expected 200")
+	}
+	if responseMap["status"] != "ok" {
+		t.Errorf("Expected ok")
+	}
+}

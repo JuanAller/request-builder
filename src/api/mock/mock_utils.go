@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"encoding/json"
 	"encoding/xml"
+	"compress/gzip"
 )
 
 func NewJsonResponse(status int, body interface{}) (*http.Response, error) {
@@ -25,6 +26,20 @@ func NewXmlResponse(status int, body interface{}) (*http.Response, error) {
 	}
 	response := newBytesResponse(status, encoded)
 	response.Header.Set("Content-Type", "application/xml")
+	return response, nil
+}
+
+func NewJsonGzipResponse(status int, body interface{}) (*http.Response, error) {
+	encoded, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	var b bytes.Buffer
+	w := gzip.NewWriter(&b)
+	w.Write(encoded)
+	w.Close()
+	response := newBytesResponse(status, b.Bytes())
+	response.Header.Set("Content-Encoding", "gzip")
 	return response, nil
 }
 

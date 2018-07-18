@@ -13,11 +13,16 @@ const (
 )
 
 type requestBuilder struct {
-	client             HttpClient
-	request            *request
-	contentType        string
-	unmarshalFunctions map[string]func([]byte, interface{}) error
-	logResponseBody    bool
+	client               HttpClient
+	request              *request
+	contentType          string
+	unmarshalFunctions   map[string]func([]byte, interface{}) error
+	compressionFunctions map[string]compressionAlgorithm
+	logResponseBody      bool
+}
+
+func (requestBuilder *requestBuilder) AcceptGzipEncoding() *requestBuilder {
+	return requestBuilder.WithHeader("Accept-Encoding", "gzip")
 }
 
 func (requestBuilder *requestBuilder) WithQueryParam(key string, value string) *requestBuilder {
@@ -77,6 +82,12 @@ func (requestBuilder *requestBuilder) Execute(entityResponse interface{}) *Respo
 	defer response.Body.Close()
 	if response.StatusCode >= 200 && response.StatusCode < 300 {
 		body, _ := ioutil.ReadAll(response.Body)
+		if body, err = requestBuilder.compressionFunctions[compressionType(response)](body); err != nil {
+			return &Response{
+				StatusCode: response.StatusCode,
+				Error:      err,
+			}
+		}
 		return &Response{
 			StatusCode: response.StatusCode,
 			Error:      requestBuilder.unmarshalFunctions[requestBuilder.contentType](body, entityResponse),
