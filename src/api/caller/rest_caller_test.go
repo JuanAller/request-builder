@@ -105,14 +105,11 @@ func TestRestCaller_ExecuteCall(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			restCaller := &RestCaller{
-				RequestBuilder:  c.executable,
-				Entity:          c.entity,
-				ResponseHandler: c.responseHandler,
-				Retries:         c.retries,
-				BackOff:         c.backOff,
-			}
-
+			restCaller := NewRestCaller(c.executable,
+				c.entity,
+				c.responseHandler,
+				c.retries,
+				c.backOff)
 			err := restCaller.ExecuteCall()
 
 			if c.withRetries {

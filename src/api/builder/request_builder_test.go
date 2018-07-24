@@ -4,7 +4,49 @@ import (
 	"testing"
 	"net/http"
 	"github.com/JuanAller/request-builder/src/api/mock"
+	"fmt"
+	"errors"
 )
+
+type checkFunc func(response *Response) error
+
+func checkStatusCode(statusCode int) checkFunc {
+	return func(response *Response) error {
+		if statusCode != response.StatusCode {
+			return fmt.Errorf("Expected : %v , but got : %v ", statusCode, response.StatusCode)
+		}
+		return nil
+	}
+}
+
+func checkNotError() checkFunc {
+	return func(response *Response) error {
+		if response.Error != nil {
+			return fmt.Errorf("Not expected error : %v ", response.Error)
+		}
+		return nil
+	}
+}
+
+func checkErrorMessage(errMessage string) checkFunc {
+	return func(response *Response) error {
+		if errMessage != response.Error.Error() {
+			fmt.Errorf("Expected error message : %v, but got : %v ", errMessage, response.Error.Error())
+		}
+		return nil
+	}
+}
+
+func checkFuncs(checks ...checkFunc) checkFunc {
+	return func(response *Response) error {
+		for _, check := range checks {
+			if err := check(response); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+}
 
 func TestGet(t *testing.T) {
 	responseMap := make(map[string]string)
@@ -13,9 +55,11 @@ func TestGet(t *testing.T) {
 			return mock.NewJsonResponse(http.StatusOK, map[string]string{"name": "aName"})
 		},
 	}, "http://test/get_ok").Execute(&responseMap)
-	if response.Error != nil {
-		t.Errorf("not expected error")
+
+	if err := checkFuncs(checkNotError())(response); err != nil {
+		t.Error(err)
 	}
+
 	if responseMap["name"] != "aName" {
 		t.Errorf("expected aName")
 	}
@@ -29,8 +73,21 @@ func TestGetNotFound(t *testing.T) {
 		},
 	}, "http://test/get_not_found").Execute(&responseMap)
 
-	if response.StatusCode != http.StatusNotFound {
-		t.Errorf("expected not found")
+	if err := checkFuncs(checkStatusCode(http.StatusNotFound), checkNotError())(response); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestGetWithError(t *testing.T) {
+	responseMap := make(map[string]string)
+	response := Get(&mock.HttpClientMock{
+		MakeResponseFunction: func(request *http.Request) (*http.Response, error) {
+			return nil, errors.New("an error")
+		},
+	}, "http://test/get_not_found").Execute(&responseMap)
+
+	if err := checkFuncs(checkErrorMessage("an error"))(response); err != nil {
+		t.Error(err)
 	}
 }
 
@@ -42,8 +99,8 @@ func TestGetServerError(t *testing.T) {
 		},
 	}, "http://test/get_server_error").Execute(&responseMap)
 
-	if response.StatusCode != http.StatusInternalServerError {
-		t.Errorf("expected server error")
+	if err := checkFuncs(checkStatusCode(http.StatusInternalServerError), checkNotError())(response); err != nil {
+		t.Error(err)
 	}
 }
 
@@ -59,8 +116,9 @@ func TestGetWithContentType(t *testing.T) {
 	}, "http://test/get_with_content_type").
 		WithJSONContentType().
 		Execute(&responseMap)
-	if response.StatusCode != http.StatusOK {
-		t.Errorf("expected 200 status code")
+
+	if err := checkFuncs(checkStatusCode(http.StatusOK), checkNotError())(response); err != nil {
+		t.Error(err)
 	}
 }
 
@@ -82,9 +140,11 @@ func TestGetXML(t *testing.T) {
 	}, "http://test/get_with_xml").
 		WithXMLContentType().
 		Execute(responseMap)
-	if response.StatusCode != http.StatusOK {
-		t.Errorf("expected 200 status code")
+
+	if err := checkFuncs(checkStatusCode(http.StatusOK), checkNotError())(response); err != nil {
+		t.Error(err)
 	}
+
 	if responseMap.StatusCode != 200 {
 		t.Errorf("expected 200")
 	}
@@ -103,8 +163,8 @@ func TestRequestBuilder_WithQueryParam(t *testing.T) {
 		WithQueryParam("query_param", "my_param").
 		Execute(&responseMap)
 
-	if response.StatusCode != http.StatusOK {
-		t.Errorf("expecte 200 status code")
+	if err := checkFuncs(checkStatusCode(http.StatusOK), checkNotError())(response); err != nil {
+		t.Error(err)
 	}
 }
 
@@ -118,12 +178,10 @@ func TestPostOk(t *testing.T) {
 		WithBody(map[string]string{"my_field": "my_value"}).
 		Execute(&responseMap)
 
-	if response.StatusCode != http.StatusCreated {
-		t.Errorf("expected status 201")
+	if err := checkFuncs(checkStatusCode(http.StatusCreated), checkNotError())(response); err != nil {
+		t.Error(err)
 	}
-	if response.Error != nil {
-		t.Errorf("not error expected")
-	}
+
 	if responseMap["my_field"] != "my_value" {
 		t.Errorf("Expected my_value in response")
 	}
@@ -136,8 +194,9 @@ func TestPostWithServerError(t *testing.T) {
 			return mock.NewJsonResponse(http.StatusInternalServerError, map[string]string{"status": "error"})
 		},
 	}, "http://test/post_server_error").Execute(&responseMap)
-	if response.StatusCode != http.StatusInternalServerError {
-		t.Errorf("expected 500 status code")
+
+	if err := checkFuncs(checkStatusCode(http.StatusInternalServerError), checkNotError())(response); err != nil {
+		t.Error(err)
 	}
 }
 
@@ -154,8 +213,9 @@ func TestGetWithBasicAuthentication(t *testing.T) {
 		WithJSONContentType().
 		WithBasicAuthorization("admin", "admin").
 		Execute(&responseMap)
-	if response.StatusCode != http.StatusOK {
-		t.Errorf("Expected 200")
+
+	if err := checkFuncs(checkStatusCode(http.StatusOK), checkNotError())(response); err != nil {
+		t.Error(err)
 	}
 }
 
@@ -174,9 +234,11 @@ func TestGetWithGZIPCompression(t *testing.T) {
 		LogRequestBody().
 		LogResponseBody().
 		Execute(&responseMap)
-	if response.StatusCode != http.StatusOK {
-		t.Errorf("Expected 200")
+
+	if err := checkFuncs(checkStatusCode(http.StatusOK), checkNotError())(response); err != nil {
+		t.Error(err)
 	}
+
 	if responseMap["status"] != "ok" {
 		t.Errorf("Expected ok")
 	}
