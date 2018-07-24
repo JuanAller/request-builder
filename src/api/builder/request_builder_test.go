@@ -102,7 +102,7 @@ func TestGet(t *testing.T) {
 		LogResponseBody().
 		Execute(&responseMap)
 
-	if err := checkRespFuncs(checkNotError())(response); err != nil {
+	if err := checkRespFuncs(checkStatusCode(http.StatusOK), checkNotError())(response); err != nil {
 		t.Error(err)
 	}
 
