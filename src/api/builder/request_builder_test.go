@@ -6,6 +6,8 @@ import (
 	"github.com/JuanAller/request-builder/src/api/mock"
 	"fmt"
 	"errors"
+	"encoding/json"
+	"encoding/xml"
 )
 
 type checkRequestFunc func(request *http.Request) error
@@ -100,6 +102,30 @@ func TestGet(t *testing.T) {
 	}, "http://test/get_ok").
 		LogRequestBody().
 		LogResponseBody().
+		Execute(&responseMap)
+
+	if err := checkRespFuncs(checkStatusCode(http.StatusOK), checkNotError())(response); err != nil {
+		t.Error(err)
+	}
+
+	if responseMap["name"] != "aName" {
+		t.Errorf("expected aName")
+	}
+}
+
+func TestGetWithCustomUnmarshalFunc(t *testing.T) {
+	responseMap := make(map[string]string)
+	response := Get(&mock.HttpClientMock{
+		MakeResponseFunction: func(request *http.Request) (*http.Response, error) {
+			if err := checkReqFuncs(checkReqMethod("GET"))(request); err != nil {
+				return nil, err
+			}
+			return mock.NewJsonResponse(http.StatusOK, map[string]string{"name": "aName"})
+		},
+	}, "http://test/get_ok").
+		LogRequestBody().
+		LogResponseBody().
+		WithCustomJSONUnmarshal(json.Unmarshal).
 		Execute(&responseMap)
 
 	if err := checkRespFuncs(checkStatusCode(http.StatusOK), checkNotError())(response); err != nil {
@@ -206,6 +232,35 @@ func TestGetXML(t *testing.T) {
 		WithXMLContentType().
 		LogRequestBody().
 		LogResponseBody().
+		Execute(responseMap)
+
+	if err := checkRespFuncs(checkStatusCode(http.StatusOK), checkNotError())(response); err != nil {
+		t.Error(err)
+	}
+
+	if responseMap.StatusCode != 200 {
+		t.Errorf("expected 200")
+	}
+}
+
+func TestGetXMLWithCustomUnmarshalFunc(t *testing.T) {
+	responseMap := &Response{}
+	response := Get(&mock.HttpClientMock{
+		MakeResponseFunction: func(request *http.Request) (*http.Response, error) {
+			if err := checkReqFuncs(checkReqMethod("GET"),
+				checkReqHeader("Content-Type", "application/xml"))(request); err != nil {
+				return nil, err
+			}
+			return mock.NewXmlResponse(http.StatusOK, &Response{
+				StatusCode: http.StatusOK,
+				Error:      nil,
+			})
+		},
+	}, "http://test/get_with_xml").
+		WithXMLContentType().
+		LogRequestBody().
+		LogResponseBody().
+		WithCustomXMLUnmarshal(xml.Unmarshal).
 		Execute(responseMap)
 
 	if err := checkRespFuncs(checkStatusCode(http.StatusOK), checkNotError())(response); err != nil {

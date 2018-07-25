@@ -12,6 +12,8 @@ const (
 	APPLICATIONXML  = "application/xml"
 )
 
+type unmarshalFunc func([]byte, interface{}) error
+
 type requestBuilder struct {
 	client               HttpClient
 	request              *request
@@ -19,10 +21,6 @@ type requestBuilder struct {
 	unmarshalFunctions   map[string]func([]byte, interface{}) error
 	compressionFunctions map[string]compressionAlgorithm
 	logResponseBody      bool
-}
-
-func (requestBuilder *requestBuilder) AcceptGzipEncoding() *requestBuilder {
-	return requestBuilder.WithHeader("Accept-Encoding", "gzip")
 }
 
 func (requestBuilder *requestBuilder) WithQueryParam(key string, value string) *requestBuilder {
@@ -35,14 +33,28 @@ func (requestBuilder *requestBuilder) WithHeader(key string, value string) *requ
 	return requestBuilder
 }
 
+func (requestBuilder *requestBuilder) AcceptGzipEncoding() *requestBuilder {
+	return requestBuilder.WithHeader("Accept-Encoding", "gzip")
+}
+
 func (requestBuilder *requestBuilder) WithJSONContentType() *requestBuilder {
 	requestBuilder.contentType = APPLICATIONJSON
 	return requestBuilder.WithHeader("Content-Type", APPLICATIONJSON)
 }
 
+func (requestBuilder *requestBuilder) WithCustomJSONUnmarshal(custom unmarshalFunc) *requestBuilder {
+	requestBuilder.unmarshalFunctions[APPLICATIONJSON] = custom
+	return requestBuilder
+}
+
 func (requestBuilder *requestBuilder) WithXMLContentType() *requestBuilder {
 	requestBuilder.contentType = APPLICATIONXML
 	return requestBuilder.WithHeader("Content-Type", APPLICATIONXML)
+}
+
+func (requestBuilder *requestBuilder) WithCustomXMLUnmarshal(custom unmarshalFunc) *requestBuilder {
+	requestBuilder.unmarshalFunctions[APPLICATIONXML] = custom
+	return requestBuilder
 }
 
 func (requestBuilder *requestBuilder) WithBody(body interface{}) *requestBuilder {
