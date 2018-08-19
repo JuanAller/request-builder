@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"net/http/httputil"
 	"log"
+	"encoding/xml"
 )
 
 type request struct {
@@ -14,6 +15,8 @@ type request struct {
 	Headers        map[string]string
 	QueryParams    map[string]string
 	Body           interface{}
+	MarshalFuncs   map[string]func(v interface{}) ([]byte, error)
+	ContentType    string
 	logRequestBody bool
 }
 
@@ -23,11 +26,16 @@ func newRequest(method string, path string) *request {
 		Path:        path,
 		Headers:     make(map[string]string),
 		QueryParams: make(map[string]string),
+		MarshalFuncs: map[string]func(v interface{}) ([]byte, error){
+			APPLICATIONJSON: json.Marshal,
+			APPLICATIONXML:  xml.Marshal,
+		},
+		ContentType: APPLICATIONJSON,
 	}
 }
 
-func (request *request) execute(client HttpClient) (*http.Response, error) {
-	byteSlice, marshallErr := json.Marshal(request.Body)
+func (request *request) build() (*http.Request, error) {
+	byteSlice, marshallErr := request.MarshalFuncs[request.ContentType](request.Body)
 	if marshallErr != nil {
 		return nil, marshallErr
 	}
@@ -44,5 +52,5 @@ func (request *request) execute(client HttpClient) (*http.Response, error) {
 		rawRequest, _ := httputil.DumpRequestOut(newRequest, request.logRequestBody)
 		log.Println(string(rawRequest))
 	}
-	return client.Do(newRequest)
+	return newRequest, nil
 }

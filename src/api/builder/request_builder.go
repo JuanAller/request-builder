@@ -39,6 +39,7 @@ func (requestBuilder *requestBuilder) AcceptGzipEncoding() *requestBuilder {
 
 func (requestBuilder *requestBuilder) WithJSONContentType() *requestBuilder {
 	requestBuilder.contentType = APPLICATIONJSON
+	requestBuilder.request.ContentType = APPLICATIONJSON
 	return requestBuilder.WithHeader("Content-Type", APPLICATIONJSON)
 }
 
@@ -49,6 +50,7 @@ func (requestBuilder *requestBuilder) WithCustomJSONUnmarshal(custom unmarshalFu
 
 func (requestBuilder *requestBuilder) WithXMLContentType() *requestBuilder {
 	requestBuilder.contentType = APPLICATIONXML
+	requestBuilder.request.ContentType = APPLICATIONXML
 	return requestBuilder.WithHeader("Content-Type", APPLICATIONXML)
 }
 
@@ -81,7 +83,13 @@ func (requestBuilder *requestBuilder) LogRequestBody() *requestBuilder {
 }
 
 func (requestBuilder *requestBuilder) Execute(entityResponse interface{}) *Response {
-	response, err := requestBuilder.request.execute(requestBuilder.client)
+	request, err := requestBuilder.request.build()
+	if err != nil {
+		return &Response{
+			Error: err,
+		}
+	}
+	response, err := requestBuilder.client.Do(request)
 	if err != nil {
 		return &Response{
 			Error: err,
