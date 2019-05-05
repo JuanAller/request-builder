@@ -17,9 +17,7 @@ func InParallelCalls(callers ...Caller) error {
 	var g errgroup.Group
 	for _, caller := range callers {
 		caller := caller
-		g.Go(func() error {
-			return caller.ExecuteCall()
-		})
+		g.Go(caller.ExecuteCall())
 	}
 	if err := g.Wait(); err != nil {
 		return err
